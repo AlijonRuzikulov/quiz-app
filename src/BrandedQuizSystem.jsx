@@ -1,19 +1,18 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  CheckCircle2,
-  XCircle,
-  Trophy,
-  RotateCcw,
-  Brain,
-  Calculator,
-  Timer,
   ArrowRight,
+  Brain,
+  CheckCircle2,
+  RotateCcw,
+  Timer,
+  Trophy,
+  XCircle,
 } from "lucide-react";
 
 const BRAND = {
   name: "Millionaire Mind",
-  subtitle: "Business Simulation Training",
+  subtitle: "TSI Edition",
   navy: "#2E4E7B",
   gold: "#F3A40B",
   cream: "#F6F3EB",
@@ -22,6 +21,7 @@ const BRAND = {
   red: "#F15D65",
   green: "#00BF63",
   deep: "#1A2332",
+  white: "#FFFFFF",
 };
 
 const quizBank = [
@@ -29,7 +29,8 @@ const quizBank = [
     id: 1,
     type: "business",
     difficulty: "easy",
-    question: "Your logistics startup has monthly revenue of €6,000 and monthly costs of €8,000. What is your cash flow?",
+    question:
+      "Your logistics startup has monthly revenue of €6,000 and monthly costs of €8,000. What is your cash flow?",
     options: ["+€2,000", "-€2,000", "€14,000", "€48,000"],
     correct: "-€2,000",
   },
@@ -37,7 +38,8 @@ const quizBank = [
     id: 2,
     type: "business",
     difficulty: "easy",
-    question: "You have €15,000 in the bank and burn €3,000 per month. How many months until you run out?",
+    question:
+      "You have €15,000 in the bank and burn €3,000 per month. How many months until you run out?",
     options: ["3 months", "4 months", "5 months", "6 months"],
     correct: "5 months",
   },
@@ -45,7 +47,8 @@ const quizBank = [
     id: 3,
     type: "business",
     difficulty: "easy",
-    question: "You invest €8,000 in a delivery van. It generates €2,000 profit per year. What is your ROI?",
+    question:
+      "You invest €8,000 in a delivery van. It generates €2,000 profit per year. What is your ROI?",
     options: ["4%", "25%", "40%", "250%"],
     correct: "25%",
   },
@@ -53,7 +56,8 @@ const quizBank = [
     id: 4,
     type: "business",
     difficulty: "medium",
-    question: "A new competitor enters your market offering delivery 20% cheaper than you. Your best response is to:",
+    question:
+      "A new competitor enters your market offering delivery 20% cheaper than you. Your best response is to:",
     options: [
       "Match their price immediately",
       "Find what they cannot offer and lead with that",
@@ -79,7 +83,8 @@ const quizBank = [
     id: 6,
     type: "business",
     difficulty: "medium",
-    question: "Before spending €10,000 on a new fleet vehicle you should:",
+    question:
+      "Before spending €10,000 on a new fleet vehicle you should:",
     options: [
       "Check if competitors have one",
       "Confirm it generates more than it costs",
@@ -92,7 +97,8 @@ const quizBank = [
     id: 7,
     type: "business",
     difficulty: "medium",
-    question: "In a 5-person startup, who is responsible for flagging that the company is 3 weeks from bankruptcy?",
+    question:
+      "In a 5-person startup, who is responsible for flagging that the company is 3 weeks from bankruptcy?",
     options: ["CEO", "CFO", "COO", "Everyone equally"],
     correct: "CFO",
   },
@@ -100,7 +106,8 @@ const quizBank = [
     id: 8,
     type: "business",
     difficulty: "hard",
-    question: "You have three urgent situations: a key client complaint, payroll due today, investor meeting tomorrow. You handle first:",
+    question:
+      "You have three urgent situations: a key client complaint, payroll due today, investor meeting tomorrow. You handle first:",
     options: [
       "Investor meeting - future money",
       "Client complaint - reputation",
@@ -113,7 +120,8 @@ const quizBank = [
     id: 9,
     type: "business",
     difficulty: "hard",
-    question: "A partner offers you a deal - they bring the clients, you do the work, 70/30 split in their favor. You:",
+    question:
+      "A partner offers you a deal - they bring the clients, you do the work, 70/30 split in their favor. You:",
     options: [
       "Accept - clients are hard to find",
       "Reject - 70/30 is never acceptable",
@@ -134,7 +142,8 @@ const quizBank = [
     id: 11,
     type: "bonus",
     difficulty: "fun",
-    question: "Which of these has been a real mode of transport in Latvian history?",
+    question:
+      "Which of these has been a real mode of transport in Latvian history?",
     options: [
       "Submarine taxi on the Daugava",
       "Dog sled postal service",
@@ -146,89 +155,88 @@ const quizBank = [
   },
 ];
 
-function shuffle(array) {
-  return [...array].sort(() => Math.random() - 0.5);
+function useScreenSize() {
+  const [width, setWidth] = useState(typeof window === "undefined" ? 1024 : window.innerWidth);
+
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  return {
+    width,
+    isMobile: width < 640,
+    isTablet: width >= 640 && width < 900,
+  };
 }
 
 export default function BrandedQuizSystem() {
-  const [timeLeft, setTimeLeft] = useState(20);
-  const getQuestionTime = (question) => (question?.correct === null ? 90 : 20);
+  const { isMobile, isTablet } = useScreenSize();
+  const styles = useMemo(() => createStyles(isMobile, isTablet), [isMobile, isTablet]);
+
   const [started, setStarted] = useState(false);
-  // Fixed quiz order. No category filtering, because this quiz must run exactly as written.
   const [current, setCurrent] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [score, setScore] = useState(0);
   const [answers, setAnswers] = useState([]);
   const [finished, setFinished] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(20);
 
-  const questions = useMemo(() => quizBank, []);
-  const scoredQuestionsCount = questions.filter((q) => q.correct !== null).length;
-
+  const questions = quizBank;
   const active = questions[current];
-  const progress = questions.length ? ((current + 1) / questions.length) * 100 : 0;
-  const scorePercent = Math.round((score / scoredQuestionsCount) * 100);
   const cashEarned = score * 1000;
+  const progress = ((current + 1) / questions.length) * 100;
+  const scorePercent = Math.round((score / questions.length) * 100);
 
-  React.useEffect(() => {
-    if (!started || finished || !active) return;
-    setTimeLeft(getQuestionTime(active));
-  }, [current, started, finished, active?.id]);
+  useEffect(() => {
+    if (!started || finished || selectedAnswer) return;
 
-  React.useEffect(() => {
-    if (!started || finished) return;
-    if (selectedAnswer && active?.correct !== null) return;
-
-    if (timeLeft === 0) {
-      nextQuestion();
+    if (timeLeft <= 0) {
+      recordAnswer(null);
       return;
     }
 
-    const timer = setTimeout(() => {
-      setTimeLeft((t) => t - 1);
-    }, 1000);
-
+    const timer = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
     return () => clearTimeout(timer);
-  }, [timeLeft, started, finished, selectedAnswer, active?.id]);
-
-  const handleAnswer = (option) => {
-    if (selectedAnswer) return;
-
-    const isDiscussion = active.correct === null;
-    const isCorrect = !isDiscussion && option === active.correct;
-
-    setSelectedAnswer(option);
-    if (isCorrect) setScore((s) => s + 1);
-
-    setAnswers((prev) => [
-      ...prev,
-      {
-        question: active.question,
-        selected: option,
-        correct: isDiscussion ? "No right answer" : active.correct,
-        isCorrect,
-        isDiscussion,
-      },
-    ]);
-  };
-
-  const nextQuestion = () => {
-    setTimeLeft(20);
-    if (current + 1 >= questions.length) {
-      setFinished(true);
-    } else {
-      setCurrent((c) => c + 1);
-      setSelectedAnswer(null);
-    }
-  };
+  }, [timeLeft, started, finished, selectedAnswer]);
 
   const restart = () => {
-    setTimeLeft(20);
     setStarted(false);
     setCurrent(0);
     setSelectedAnswer(null);
     setScore(0);
     setAnswers([]);
     setFinished(false);
+    setTimeLeft(20);
+  };
+
+  const recordAnswer = (option) => {
+    if (selectedAnswer) return;
+
+    const isCorrect = option === active.correct;
+    setSelectedAnswer(option || "Time out");
+    if (isCorrect) setScore((s) => s + 1);
+
+    setAnswers((prev) => [
+      ...prev,
+      {
+        question: active.question,
+        selected: option || "Time out",
+        correct: active.correct,
+        isCorrect,
+      },
+    ]);
+  };
+
+  const nextQuestion = () => {
+    if (current + 1 >= questions.length) {
+      setFinished(true);
+    } else {
+      setCurrent((c) => c + 1);
+      setSelectedAnswer(null);
+      setTimeLeft(20);
+    }
   };
 
   return (
@@ -241,170 +249,176 @@ export default function BrandedQuizSystem() {
           </div>
 
           <div style={styles.logoBoxSmall}>
-            <Brain size={24} color={BRAND.navy} />
+            <Brain size={isMobile ? 19 : 24} color={BRAND.navy} />
           </div>
         </header>
 
         <AnimatePresence mode="wait">
           {!started && !finished && (
-            <motion.div
+            <motion.main
               key="start"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              style={styles.card}
+              style={styles.startCard}
             >
-              <div style={styles.startGrid}>
-                <div style={styles.startLeft}>
-                  <div style={styles.goldLabel}>START QUIZ</div>
-                  <h1 style={styles.heroTitle}>Millionaire Mind Warm-Up Quiz</h1>
-                  <p style={styles.heroText}>TSI Edition</p>
+              <section style={styles.startLeft}>
+                <div style={styles.goldLabel}>START QUIZ</div>
+                <h1 style={styles.heroTitle}>Test Your Business Instincts</h1>
+                <p style={styles.heroText}>Millionaire Mind — TSI Edition</p>
 
-                  <div style={styles.infoGrid}>
-                    <div style={styles.infoButton}>11 Questions</div>
-                    <div style={styles.infoButton}>20s Each</div>
-                    <div style={styles.infoButton}>€1,000 / Correct</div>
+                <div style={styles.infoGrid}>
+                  <div style={styles.infoCard}>
+                    <strong>11</strong>
+                    <span>Questions</span>
                   </div>
-
-                  <button onClick={() => setStarted(true)} style={styles.mainButton}>
-                    Start now <ArrowRight size={20} />
-                  </button>
+                  <div style={styles.infoCard}>
+                    <strong>20s</strong>
+                    <span>Each</span>
+                  </div>
+                  <div style={styles.infoCard}>
+                    <strong>€1,000</strong>
+                    <span>/ Correct</span>
+                  </div>
                 </div>
 
-                <div style={styles.previewPanel}>
-                  <motion.div
-                    animate={{ y: [0, -10, 0] }}
-                    transition={{ duration: 4, repeat: Infinity }}
-                    style={styles.previewCard}
-                  >
-                    <div style={styles.previewIcons}>
-                      <Calculator size={34} color={BRAND.cream} />
-                      <Brain size={34} color={BRAND.cream} />
-                    </div>
-                    <div style={styles.previewQuestion}>Are you ready?</div>
-                    <div style={styles.previewSubtext}>Burn your brain.</div>
-                    <div style={styles.previewOptions}>
-                      {["Think", "Decide", "Win"].map((x) => (
-                        <div key={x} style={styles.previewOption}>{x}</div>
-                      ))}
-                    </div>
-                  </motion.div>
-                </div>
-              </div>
-            </motion.div>
+                <button onClick={() => setStarted(true)} style={styles.mainButton}>
+                  Start the simulation <ArrowRight size={isMobile ? 18 : 22} />
+                </button>
+
+                <p style={styles.microText}>Think fast. Decide faster.</p>
+              </section>
+
+              <section style={styles.startRight}>
+                <motion.div
+                  animate={{ scale: [1, 1.03, 1] }}
+                  transition={{ duration: 3, repeat: Infinity }}
+                  style={styles.readyCard}
+                >
+                  <div style={styles.readyText}>Are you ready?</div>
+                  <div style={styles.burnText}>Burn your brain.</div>
+                  <div style={styles.brainCircle}>
+                    <Brain size={isMobile ? 52 : 86} color={BRAND.gold} />
+                  </div>
+                </motion.div>
+              </section>
+            </motion.main>
           )}
 
           {started && !finished && active && (
-            <motion.div
+            <motion.main
               key={active.id}
-              initial={{ opacity: 0, x: 30 }}
+              initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -30 }}
-              style={styles.card}
+              exit={{ opacity: 0, x: -20 }}
+              style={styles.quizCard}
             >
-              <div style={styles.questionTop}>
-                <div style={styles.timerBox}>⏱ {timeLeft}s</div>
+              <section style={styles.quizTop}>
                 <div>
                   <div style={styles.goldLabel}>QUESTION {current + 1} OF {questions.length}</div>
                   <div style={styles.meta}>{active.type} · {active.difficulty}</div>
                 </div>
-                <div style={styles.scoreBadge}>Cash: €{cashEarned.toLocaleString()}</div>
-              </div>
+                <div style={styles.topBadges}>
+                  <div style={styles.timerBadge}><Timer size={16} /> {timeLeft}s</div>
+                  <div style={styles.scoreBadge}>€{cashEarned.toLocaleString()}</div>
+                </div>
+              </section>
 
               <div style={styles.progressOuter}>
-                <motion.div style={styles.progressInner} animate={{ width: `${progress}%` }} />
+                <div style={{ ...styles.progressInner, width: `${progress}%` }} />
               </div>
 
-              <div style={styles.questionBox}>
+              <section style={styles.questionBox}>
                 <h2 style={styles.questionText}>{active.question}</h2>
-              </div>
+              </section>
 
-              <div style={styles.optionsGrid}>
-                {active.options.map((option) => {
+              <section style={styles.optionsGrid}>
+                {active.options.map((option, index) => {
                   const isChosen = selectedAnswer === option;
                   const isCorrect = option === active.correct;
-                  const isDiscussion = active.correct === null;
-                  const showCorrect = selectedAnswer && !isDiscussion && isCorrect;
-                  const showWrong = selectedAnswer && !isDiscussion && isChosen && !isCorrect;
-                  const showDiscussion = selectedAnswer && isDiscussion && isChosen;
+                  const showCorrect = selectedAnswer && isCorrect;
+                  const showWrong = selectedAnswer && isChosen && !isCorrect;
 
                   return (
                     <button
                       key={option}
-                      onClick={() => handleAnswer(option)}
+                      onClick={() => recordAnswer(option)}
                       disabled={!!selectedAnswer}
                       style={{
                         ...styles.answerButton,
                         borderColor: showCorrect ? BRAND.green : showWrong ? BRAND.red : BRAND.sky,
-                        background: showCorrect ? "#E9FFF4" : showWrong ? "#FFF0F1" : showDiscussion ? BRAND.sky : BRAND.cream,
+                        background: showCorrect ? "#E9FFF4" : showWrong ? "#FFF0F1" : BRAND.cream,
                         color: showCorrect ? BRAND.green : showWrong ? BRAND.red : BRAND.navy,
                       }}
                     >
-                      {option}
-                      {showCorrect && <CheckCircle2 size={24} />}
-                      {showWrong && <XCircle size={24} />}
+                      <span style={styles.answerLetter}>{String.fromCharCode(65 + index)}.</span>
+                      <span>{option}</span>
+                      {showCorrect && <CheckCircle2 size={22} />}
+                      {showWrong && <XCircle size={22} />}
                     </button>
                   );
                 })}
-              </div>
+              </section>
 
               {selectedAnswer && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={styles.feedbackBox}>
-                  <div style={{ fontWeight: 900, color: selectedAnswer === active.correct ? BRAND.green : BRAND.red }}>
-                    {active.correct === null ? "Discussion question" : selectedAnswer === active.correct ? "Correct answer" : "Incorrect answer"}
-                  </div>
-                  <p style={styles.feedbackText}>{active.correct === null ? "Discuss as a team. You have 90 seconds." : active.explanation}</p>
+                <motion.section
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  style={styles.feedbackBox}
+                >
+                  <strong style={{ color: selectedAnswer === active.correct ? BRAND.green : BRAND.red }}>
+                    {selectedAnswer === active.correct ? "Correct answer" : selectedAnswer === "Time out" ? "Time is up" : "Incorrect answer"}
+                  </strong>
+                  <p style={styles.feedbackText}>Correct answer: {active.correct}</p>
                   <button onClick={nextQuestion} style={styles.mainButtonSmall}>
                     {current + 1 >= questions.length ? "Show final score" : "Next question"}
                   </button>
-                </motion.div>
+                </motion.section>
               )}
-            </motion.div>
+            </motion.main>
           )}
 
           {finished && (
-            <motion.div
+            <motion.main
               key="finish"
-              initial={{ opacity: 0, scale: 0.96 }}
+              initial={{ opacity: 0, scale: 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
-              style={styles.card}
+              style={styles.finishCard}
             >
-              <div style={styles.finishCenter}>
+              <section style={styles.finishCenter}>
                 <div style={styles.trophyBox}>
-                  <Trophy size={44} color={BRAND.navy} />
+                  <Trophy size={isMobile ? 36 : 48} color={BRAND.navy} />
                 </div>
                 <div style={styles.goldLabel}>FINAL SCORE</div>
                 <h2 style={styles.finalScore}>€{cashEarned.toLocaleString()}</h2>
-                <p style={styles.heroText}>{score} correct answers from {scoredQuestionsCount} scored questions · {scorePercent}%</p>
+                <p style={styles.heroText}>{score} correct answers from {questions.length} questions · {scorePercent}%</p>
 
                 <div style={styles.progressOuterBig}>
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${scorePercent}%` }} style={styles.progressInner} />
+                  <div style={{ ...styles.progressInner, width: `${scorePercent}%` }} />
                 </div>
 
                 <button onClick={restart} style={styles.mainButton}>
                   <RotateCcw size={20} /> Restart quiz
                 </button>
-              </div>
+              </section>
 
-              <div style={styles.answerList}>
+              <section style={styles.answerList}>
                 {answers.map((item, index) => (
                   <div key={index} style={styles.answerRow}>
                     <div>
                       <div style={styles.answerQuestion}>{index + 1}. {item.question}</div>
-                      <div style={styles.answerMeta}>{item.isDiscussion ? `Team discussion answer: ${item.selected}` : `Your answer: ${item.selected} · Correct answer: ${item.correct}`}</div>
+                      <div style={styles.answerMeta}>Your answer: {item.selected} · Correct answer: {item.correct}</div>
                     </div>
-                    {item.isDiscussion ? (
-                      <Brain size={26} color={BRAND.gold} />
-                    ) : item.isCorrect ? (
-                      <CheckCircle2 size={26} color={BRAND.green} />
+                    {item.isCorrect ? (
+                      <CheckCircle2 size={24} color={BRAND.green} />
                     ) : (
-                      <XCircle size={26} color={BRAND.red} />
+                      <XCircle size={24} color={BRAND.red} />
                     )}
                   </div>
                 ))}
-              </div>
-            </motion.div>
+              </section>
+            </motion.main>
           )}
         </AnimatePresence>
       </div>
@@ -412,144 +426,358 @@ export default function BrandedQuizSystem() {
   );
 }
 
-const styles = {
-  page: {
-    minHeight: "100vh",
-    background: BRAND.cream,
-    padding: "28px",
-    fontFamily: "Inter, Arial, sans-serif",
-  },
-  container: { maxWidth: "1100px", margin: "0 auto" },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "16px",
-    background: "#FFFFFF",
-    border: `1px solid ${BRAND.sky}`,
-    borderRadius: "22px",
-    padding: "14px 18px",
-    marginBottom: "24px",
-    boxShadow: "0 10px 28px rgba(26,35,50,0.10)",
-  },
-  brandWrap: { display: "flex", alignItems: "center", gap: "18px", cursor: "pointer" },
-  logoBox: {
-    width: "48px",
-    height: "48px",
-    borderRadius: "18px",
-    background: BRAND.gold,
-    display: "grid",
-    placeItems: "center",
-  },
-  logoBoxSmall: {
-    width: "48px",
-    height: "48px",
-    borderRadius: "16px",
-    background: BRAND.gold,
-    display: "grid",
-    placeItems: "center",
-  },
-  logoImage: {
-    width: "88px",
-    height: "58px",
-    objectFit: "contain",
-  },
-  subtitle: { color: BRAND.taupe, fontSize: "14px", fontWeight: 700 },
-  brandTitle: { color: BRAND.navy, fontSize: "26px", fontWeight: 1000 },
-  badge: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    color: BRAND.navy,
-    background: BRAND.sky,
-    borderRadius: "999px",
-    padding: "10px 16px",
-    fontWeight: 800,
-  },
-  card: {
-    background: BRAND.cream,
-    border: `1px solid ${BRAND.sky}`,
-    borderRadius: "34px",
-    overflow: "hidden",
-    boxShadow: "0 24px 60px rgba(26,35,50,0.16)",
-  },
-  startGrid: { display: "grid", gridTemplateColumns: "1fr 1fr" },
-  startLeft: { padding: "48px" },
-  goldLabel: { color: BRAND.gold, fontSize: "13px", fontWeight: 1000, letterSpacing: "1.5px" },
-  heroTitle: { color: BRAND.navy, fontSize: "46px", lineHeight: 1.05, margin: "14px 0" },
-  heroText: { color: BRAND.taupe, fontSize: "18px", lineHeight: 1.55 },
-  infoGrid: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", margin: "34px 0" },
-  infoButton: {
-    border: `2px solid ${BRAND.sky}`,
-    borderRadius: "20px",
-    padding: "16px",
-    color: BRAND.navy,
-    background: BRAND.cream,
-    fontWeight: 900,
-    textAlign: "center",
-  },
-  mainButton: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "10px",
-    border: "none",
-    borderRadius: "20px",
-    padding: "16px 28px",
-    background: BRAND.gold,
-    color: BRAND.navy,
-    fontWeight: 1000,
-    fontSize: "16px",
-    cursor: "pointer",
-    boxShadow: "0 14px 28px rgba(243,164,11,0.25)",
-  },
-  mainButtonSmall: {
-    border: "none",
-    borderRadius: "18px",
-    padding: "13px 22px",
-    background: BRAND.gold,
-    color: BRAND.navy,
-    fontWeight: 1000,
-    cursor: "pointer",
-    marginTop: "10px",
-  },
-  previewPanel: {
-    minHeight: "430px",
-    background: `linear-gradient(135deg, ${BRAND.navy}, ${BRAND.deep})`,
-    display: "grid",
-    placeItems: "center",
-    padding: "36px",
-  },
-  previewCard: {
-    width: "100%",
-    borderRadius: "32px",
-    background: "rgba(246,243,235,0.12)",
-    padding: "36px",
-    textAlign: "center",
-    boxShadow: "0 24px 60px rgba(0,0,0,0.25)",
-  },
-  previewIcons: { display: "flex", justifyContent: "center", gap: "16px", marginBottom: "22px" },
-  previewQuestion: { color: BRAND.cream, fontSize: "42px", fontWeight: 1000 },
-  previewSubtext: { color: BRAND.gold, fontSize: "28px", fontWeight: 900, marginTop: "12px" },
-  previewOptions: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", marginTop: "28px" },
-  previewOption: { background: "rgba(246,243,235,0.18)", color: BRAND.cream, borderRadius: "18px", padding: "14px", fontSize: "22px", fontWeight: 1000 },
-  questionTop: { display: "flex", justifyContent: "space-between", padding: "38px 42px 0", gap: "16px" },
-  meta: { color: BRAND.taupe, marginTop: "6px", textTransform: "capitalize", fontWeight: 700 },
-  scoreBadge: { background: BRAND.sky, color: BRAND.navy, borderRadius: "999px", padding: "10px 18px", fontWeight: 1000, height: "fit-content" },
-  progressOuter: { height: "12px", background: "rgba(156,202,238,0.35)", borderRadius: "999px", overflow: "hidden", margin: "28px 42px" },
-  progressOuterBig: { height: "16px", background: "rgba(156,202,238,0.35)", borderRadius: "999px", overflow: "hidden", margin: "28px 0" },
-  progressInner: { height: "100%", background: BRAND.gold, borderRadius: "999px" },
-  questionBox: { margin: "0 42px 34px", padding: "42px", borderRadius: "30px", background: `linear-gradient(135deg, ${BRAND.navy}, ${BRAND.deep})`, textAlign: "center" },
-  questionText: { color: BRAND.cream, fontSize: "44px", lineHeight: 1.15, margin: 0 },
-  optionsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px", padding: "0 42px 38px" },
-  answerButton: { minHeight: "82px", border: "2px solid", borderRadius: "26px", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", fontSize: "22px", fontWeight: 1000, cursor: "pointer" },
-  feedbackBox: { margin: "0 42px 42px", padding: "22px", borderRadius: "26px", background: BRAND.cream, border: `1px solid ${BRAND.sky}` },
-  feedbackText: { color: BRAND.taupe, fontSize: "16px", lineHeight: 1.5 },
-  finishCenter: { maxWidth: "680px", margin: "0 auto", textAlign: "center", padding: "48px 32px 20px" },
-  trophyBox: { width: "86px", height: "86px", borderRadius: "28px", background: BRAND.gold, display: "grid", placeItems: "center", margin: "0 auto 18px" },
-  finalScore: { color: BRAND.navy, fontSize: "58px", margin: "10px 0" },
-  answerList: { padding: "10px 42px 42px", display: "grid", gap: "12px" },
-  answerRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", padding: "18px", border: `1px solid ${BRAND.sky}`, borderRadius: "20px", background: BRAND.cream },
-  answerQuestion: { color: BRAND.navy, fontWeight: 900 },
-  answerMeta: { color: BRAND.taupe, marginTop: "4px", fontSize: "14px" },
-};
+function createStyles(isMobile, isTablet) {
+  const compact = isMobile || isTablet;
+
+  return {
+    page: {
+      minHeight: "100vh",
+      background: BRAND.cream,
+      padding: isMobile ? "12px" : "28px",
+      fontFamily: "Inter, Arial, sans-serif",
+      overflowX: "hidden",
+      boxSizing: "border-box",
+    },
+    container: {
+      width: "100%",
+      maxWidth: "1120px",
+      margin: "0 auto",
+      boxSizing: "border-box",
+    },
+    header: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: isMobile ? "8px" : "16px",
+      background: BRAND.white,
+      border: `1px solid ${BRAND.sky}`,
+      borderRadius: isMobile ? "18px" : "24px",
+      padding: isMobile ? "10px 12px" : "14px 18px",
+      marginBottom: isMobile ? "14px" : "24px",
+      boxShadow: "0 12px 30px rgba(26,35,50,0.10)",
+      boxSizing: "border-box",
+    },
+    brandWrap: {
+      display: "flex",
+      alignItems: "center",
+      gap: isMobile ? "10px" : "18px",
+      cursor: "pointer",
+      minWidth: 0,
+    },
+    logoImage: {
+      width: isMobile ? "58px" : "88px",
+      height: isMobile ? "44px" : "58px",
+      objectFit: "contain",
+      flexShrink: 0,
+    },
+    brandTitle: {
+      color: BRAND.navy,
+      fontSize: isMobile ? "22px" : "30px",
+      fontWeight: 1000,
+      lineHeight: 1.05,
+      whiteSpace: isMobile ? "normal" : "nowrap",
+    },
+    logoBoxSmall: {
+      width: isMobile ? "42px" : "52px",
+      height: isMobile ? "42px" : "52px",
+      borderRadius: isMobile ? "14px" : "18px",
+      background: BRAND.gold,
+      display: "grid",
+      placeItems: "center",
+      flexShrink: 0,
+    },
+    startCard: {
+      display: "grid",
+      gridTemplateColumns: compact ? "1fr" : "1fr 1fr",
+      background: BRAND.cream,
+      border: `1px solid ${BRAND.sky}`,
+      borderRadius: isMobile ? "26px" : "34px",
+      overflow: "hidden",
+      boxShadow: "0 22px 55px rgba(26,35,50,0.14)",
+    },
+    startLeft: {
+      padding: isMobile ? "32px 20px" : isTablet ? "40px" : "54px",
+      textAlign: isMobile ? "center" : "left",
+    },
+    startRight: {
+      minHeight: isMobile ? "240px" : "430px",
+      background: `linear-gradient(135deg, ${BRAND.navy}, ${BRAND.deep})`,
+      display: "grid",
+      placeItems: "center",
+      padding: isMobile ? "24px" : "36px",
+    },
+    goldLabel: {
+      color: BRAND.gold,
+      fontSize: isMobile ? "12px" : "13px",
+      fontWeight: 1000,
+      letterSpacing: "1.6px",
+    },
+    heroTitle: {
+      color: BRAND.navy,
+      fontSize: isMobile ? "34px" : isTablet ? "42px" : "52px",
+      lineHeight: 1.05,
+      margin: isMobile ? "14px 0 10px" : "16px 0 12px",
+      letterSpacing: "-1px",
+    },
+    heroText: {
+      color: BRAND.taupe,
+      fontSize: isMobile ? "16px" : "18px",
+      lineHeight: 1.45,
+      margin: 0,
+    },
+    infoGrid: {
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
+      gap: isMobile ? "10px" : "14px",
+      margin: isMobile ? "28px 0" : "36px 0",
+    },
+    infoCard: {
+      border: `2px solid ${BRAND.sky}`,
+      borderRadius: "22px",
+      padding: isMobile ? "14px" : "18px 12px",
+      color: BRAND.navy,
+      background: BRAND.white,
+      boxShadow: "0 10px 24px rgba(46,78,123,0.08)",
+      textAlign: "center",
+      display: "flex",
+      flexDirection: isMobile ? "row" : "column",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: isMobile ? "8px" : "4px",
+    },
+    mainButton: {
+      width: isMobile ? "100%" : "auto",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "10px",
+      border: "none",
+      borderRadius: "22px",
+      padding: isMobile ? "16px 20px" : "17px 30px",
+      background: BRAND.gold,
+      color: BRAND.navy,
+      fontWeight: 1000,
+      fontSize: isMobile ? "16px" : "17px",
+      cursor: "pointer",
+      boxShadow: "0 16px 34px rgba(243,164,11,0.28)",
+    },
+    microText: {
+      marginTop: "18px",
+      color: BRAND.taupe,
+      fontWeight: 800,
+      fontSize: isMobile ? "14px" : "15px",
+    },
+    readyCard: {
+      width: "100%",
+      maxWidth: "450px",
+      borderRadius: "32px",
+      textAlign: "center",
+      color: BRAND.cream,
+    },
+    readyText: {
+      fontSize: isMobile ? "32px" : "46px",
+      fontWeight: 1000,
+      lineHeight: 1.05,
+    },
+    burnText: {
+      fontSize: isMobile ? "34px" : "48px",
+      fontWeight: 1000,
+      lineHeight: 1.05,
+      color: BRAND.gold,
+      marginTop: "8px",
+    },
+    brainCircle: {
+      margin: isMobile ? "28px auto 0" : "44px auto 0",
+      width: isMobile ? "110px" : "170px",
+      height: isMobile ? "110px" : "170px",
+      borderRadius: "50%",
+      background: "rgba(246,243,235,0.08)",
+      display: "grid",
+      placeItems: "center",
+      boxShadow: "0 0 40px rgba(243,164,11,0.20)",
+    },
+    quizCard: {
+      background: BRAND.cream,
+      border: `1px solid ${BRAND.sky}`,
+      borderRadius: isMobile ? "26px" : "34px",
+      boxShadow: "0 22px 55px rgba(26,35,50,0.14)",
+      overflow: "hidden",
+    },
+    quizTop: {
+      display: "flex",
+      flexDirection: isMobile ? "column" : "row",
+      justifyContent: "space-between",
+      gap: "14px",
+      padding: isMobile ? "24px 20px 0" : "36px 42px 0",
+    },
+    meta: {
+      color: BRAND.taupe,
+      marginTop: "6px",
+      textTransform: "capitalize",
+      fontWeight: 800,
+    },
+    topBadges: {
+      display: "flex",
+      gap: "10px",
+      flexWrap: "wrap",
+    },
+    timerBadge: {
+      display: "flex",
+      alignItems: "center",
+      gap: "6px",
+      background: BRAND.gold,
+      color: BRAND.navy,
+      borderRadius: "999px",
+      padding: "10px 15px",
+      fontWeight: 1000,
+      height: "fit-content",
+    },
+    scoreBadge: {
+      background: BRAND.sky,
+      color: BRAND.navy,
+      borderRadius: "999px",
+      padding: "10px 15px",
+      fontWeight: 1000,
+      height: "fit-content",
+    },
+    progressOuter: {
+      height: "12px",
+      background: "rgba(156,202,238,0.35)",
+      borderRadius: "999px",
+      overflow: "hidden",
+      margin: isMobile ? "22px 20px" : "28px 42px",
+    },
+    progressOuterBig: {
+      height: "16px",
+      background: "rgba(156,202,238,0.35)",
+      borderRadius: "999px",
+      overflow: "hidden",
+      margin: "26px 0",
+    },
+    progressInner: {
+      height: "100%",
+      background: BRAND.gold,
+      borderRadius: "999px",
+      transition: "width 300ms ease",
+    },
+    questionBox: {
+      margin: isMobile ? "0 20px 22px" : "0 42px 34px",
+      padding: isMobile ? "26px 18px" : "42px",
+      borderRadius: isMobile ? "24px" : "30px",
+      background: `linear-gradient(135deg, ${BRAND.navy}, ${BRAND.deep})`,
+      textAlign: "center",
+    },
+    questionText: {
+      color: BRAND.cream,
+      fontSize: isMobile ? "25px" : isTablet ? "34px" : "42px",
+      lineHeight: 1.18,
+      margin: 0,
+      wordBreak: "normal",
+    },
+    optionsGrid: {
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
+      gap: isMobile ? "12px" : "16px",
+      padding: isMobile ? "0 20px 28px" : "0 42px 38px",
+    },
+    answerButton: {
+      minHeight: isMobile ? "64px" : "82px",
+      border: "2px solid",
+      borderRadius: isMobile ? "18px" : "26px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "8px",
+      padding: isMobile ? "12px" : "16px",
+      fontSize: isMobile ? "17px" : "21px",
+      fontWeight: 1000,
+      cursor: "pointer",
+      textAlign: "center",
+      lineHeight: 1.2,
+    },
+    answerLetter: {
+      opacity: 0.9,
+      flexShrink: 0,
+    },
+    feedbackBox: {
+      margin: isMobile ? "0 20px 28px" : "0 42px 42px",
+      padding: isMobile ? "18px" : "22px",
+      borderRadius: "24px",
+      background: BRAND.white,
+      border: `1px solid ${BRAND.sky}`,
+      textAlign: isMobile ? "center" : "left",
+    },
+    feedbackText: {
+      color: BRAND.taupe,
+      fontSize: "15px",
+      lineHeight: 1.45,
+      margin: "8px 0 0",
+    },
+    mainButtonSmall: {
+      width: isMobile ? "100%" : "auto",
+      border: "none",
+      borderRadius: "18px",
+      padding: "13px 22px",
+      background: BRAND.gold,
+      color: BRAND.navy,
+      fontWeight: 1000,
+      cursor: "pointer",
+      marginTop: "14px",
+    },
+    finishCard: {
+      background: BRAND.cream,
+      border: `1px solid ${BRAND.sky}`,
+      borderRadius: isMobile ? "26px" : "34px",
+      boxShadow: "0 22px 55px rgba(26,35,50,0.14)",
+      overflow: "hidden",
+    },
+    finishCenter: {
+      maxWidth: "720px",
+      margin: "0 auto",
+      textAlign: "center",
+      padding: isMobile ? "34px 20px 20px" : "48px 32px 24px",
+    },
+    trophyBox: {
+      width: isMobile ? "74px" : "90px",
+      height: isMobile ? "74px" : "90px",
+      borderRadius: "28px",
+      background: BRAND.gold,
+      display: "grid",
+      placeItems: "center",
+      margin: "0 auto 18px",
+    },
+    finalScore: {
+      color: BRAND.navy,
+      fontSize: isMobile ? "48px" : "64px",
+      margin: "10px 0",
+      lineHeight: 1,
+    },
+    answerList: {
+      padding: isMobile ? "8px 20px 28px" : "10px 42px 42px",
+      display: "grid",
+      gap: "12px",
+    },
+    answerRow: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "14px",
+      padding: isMobile ? "14px" : "18px",
+      border: `1px solid ${BRAND.sky}`,
+      borderRadius: "20px",
+      background: BRAND.white,
+    },
+    answerQuestion: {
+      color: BRAND.navy,
+      fontWeight: 900,
+      fontSize: isMobile ? "14px" : "16px",
+      lineHeight: 1.3,
+    },
+    answerMeta: {
+      color: BRAND.taupe,
+      marginTop: "5px",
+      fontSize: isMobile ? "12px" : "14px",
+      lineHeight: 1.35,
+    },
+  };
+}
